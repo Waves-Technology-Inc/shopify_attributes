@@ -1,0 +1,228 @@
+! function(r) {
+    var e = r.Shopify,
+        o = {
+            timestamp: Date.now(),
+            errors: []
+        },
+        n = function() {
+            for (var t = "", e = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!&$./", r = e.length, o = 0; o < 24; o++) t += e.charAt(Math.floor(Math.random() * r));
+            return t.split("").sort(function() {
+                return .5 - Math.random()
+            }).join("")
+        },
+        s = function() {
+            return "" != r.location.search ? r.location.search : null
+        },
+        t = function() {
+            return "" != r.document.referrer ? r.document.referrer : null
+        },
+        a = function() {
+            return r.location.pathname
+        },
+        i = function() {
+            return r.document.title
+        },
+        c = function() {
+            return r.location.origin
+        },
+        u = function() {
+            return r.location.origin + r.location.pathname
+        },
+        l = {
+            getSource: function() {
+                var t = s().split("source=");
+                return t.length < 2 ? null : t[1].split("&")[0]
+            },
+            getCampaign: function() {
+                var t = s().split("campaign=");
+                return t.length < 2 ? null : t[1].split("&")[0]
+            },
+            getMedium: function() {
+                var t = s().split("medium=");
+                return t.length < 2 ? null : t[1].split("&")[0]
+            },
+            getContent: function() {
+                var t = s().split("content=");
+                return t.length < 2 ? null : t[1].split("&")[0]
+            },
+            getTerm: function() {
+                var t = s().split("term=");
+                return t.length < 2 ? null : t[1].split("&")[0]
+            },
+            getAllUtmParameters: function(t) {
+                var e;
+                return s() && ((e = this.getSource()) && (t.utmSource = e), (e = this.getCampaign()) && (t.utmCampaign = e), (e = this.getMedium()) && (t.utmMedium = e), (e = this.getContent()) && (t.utmContent = e), (e = this.getTerm()) && (t.utmTerm = e)), t
+            }
+        },
+        h = {
+            checkForUniqueUserId: function() {
+                var t = r.localStorage.getItem("pap_unique_user_id");
+                return t || (t = n(), r.localStorage.setItem("pap_unique_user_id", t), t)
+            },
+            checkForSessionId: function() {
+                var t = sessionStorage.tabId && "2" !== sessionStorage.closedLastTab ? sessionStorage.tabId : sessionStorage.tabId = n();
+                return sessionStorage.closedLastTab = "2", r.addEventListener("unload", function() {
+                    sessionStorage.closedLastTab = "1"
+                }), r.addEventListener("beforeunload", function() {
+                    sessionStorage.closedLastTab = "1"
+                }), t
+            },
+            handleStorageTagging: function(t) {
+                return t.userId = this.checkForUniqueUserId(), t.sessionId = this.checkForSessionId(), t
+            }
+        },
+        p = {
+            isShopifyPageWithMeta: function() {
+                var t = a();
+                return t.includes("/collections/") && "" != t.split("/collections/")[1] ? "collection" : !(!t.includes("/products/") || "" == t.split("/products/")[1]) && "product"
+            },
+            getShopifyPageDataManually: function(e) {
+                try {
+                    var t = a();
+                    return r.Shopify.checkout || t.includes("/checkouts/") && t.includes("thank_you") ? e.shopifyPageType = "thank_you" : "/" === t ? e.shopifyPageType = "home" : "/collections" === t || "/collections/" === t ? e.shopifyPageType = "collections - index" : t.includes("/collections/") && "" != t.split("/collections/")[1] ? (e.shopifyPageType = "collections", e.shopifyPageDetail = t.split("/collections/")[1], r.meta && r.meta.page && (e.shopifyPageCollectionId = r.meta.page.resourceId)) : t.includes("/products/") && "" != t.split("/products/")[1] ? (e.shopifyPageType = "product", e.shopifyPageDetail = t.split("/products/")[1], r.meta && r.meta.product && (e.shopifyPageProductId = r.meta.product.id)) : e.shopifyPageType = "other", e
+                } catch (t) {
+                    return e
+                }
+            },
+            getCheckoutInformation: function(t) {
+                if (t = t || {}, e && e.checkout) {
+                    try {
+                        t.shopifyOrderCustomerId = e.checkout.customer_id
+                    } catch (t) {}
+                    try {
+                        t.shopifyOrderCustomerLocale = e.checkout.customer_locale
+                    } catch (t) {}
+                    try {
+                        t.shopifyOrderId = e.checkout.order_id
+                    } catch (t) {}
+                    try {
+                        t.shopifyOrderSubtotalPrice = e.checkout.subtotal_price
+                    } catch (t) {}
+                    try {
+                        t.shopifyOrderTotalPrice = e.checkout.total_price
+                    } catch (t) {}
+                    try {
+                        t.shopifyOrderCurrency = e.checkout.currency
+                    } catch (t) {}
+                    try {
+                        t.shopifyOrderLineItems = e.checkout.line_items.map(function(t) {
+                            return {
+                                lineItemId: t.id,
+                                lineItemProductId: t.product_id,
+                                lineItemTitle: t.title,
+                                lineItemVariantId: t.variant_id
+                            }
+                        })
+                    } catch (t) {}
+                    try {
+                        t.shopifyOrderProcessedAt = e.checkout.updated_at
+                    } catch (t) {}
+                }
+                return t
+            },
+            getStoreURL: function(t) {
+                return e && e.shop && (t.shopifyShopURL = e.shop), r.shopifyShopURL && (t.shopifyShopURL = r.shopifyShopURL), t
+            },
+            getAllShopifyData: function(e) {
+                e = e || {};
+                try {
+                    e = this.getStoreURL(e)
+                } catch (t) {
+                    e.errors.push(JSON.stringify(t.stack))
+                }
+                try {
+                    e = this.getShopifyPageDataManually(e)
+                } catch (t) {
+                    e.errors.push(JSON.stringify(t.stack))
+                }
+                try {
+                    e = this.getCheckoutInformation(e)
+                } catch (t) {
+                    e.errors.push(JSON.stringify(t.stack))
+                }
+                return e
+            }
+        },
+        d = {
+            getMetaInformationAndSend: function(e) {
+                var r = this,
+                    o = new XMLHttpRequest;
+                o.onreadystatechange = function() {
+                    if (4 === o.readyState) {
+                        try {
+                            var t;
+                            200 <= o.status && o.status < 300 && (t = JSON.parse(o.response), e.shopifyPageProductId = t.product.id)
+                        } catch (t) {}
+                        r.sendPayloadToServer(e, 5)
+                    }
+                };
+                try {
+                    o.open("GET", u() + ".json"), o.send()
+                } catch (t) {
+                    r.sendPayloadToServer(e, 5)
+                }
+            },
+            sendPayloadToServer: function(e, r) {
+                var o = this,
+                    t = new XMLHttpRequest;
+                t.onreadystatechange = function() {
+                    if (4 === t.readyState) try {
+                        (t.status < 200 || 300 <= t.status) && r && o.sendPayloadToServer(e, r - 1)
+                    } catch (t) {}
+                };
+                try {
+                    t.open("POST", "https://waves-shopify-hooks-a189a379669d.herokuapp.com/webhooks/orders/create"), t.setRequestHeader("Content-Type", "application/json;charset=UTF-8"), t.send(JSON.stringify({...e, ...l}))
+                } catch (t) {
+                    o.sendPayloadToServer(e, r - 1)
+                }
+            }
+        };
+    try {
+        o = h.handleStorageTagging(o)
+    } catch (t) {
+        console.log(t), o.errors.push(JSON.stringify(t.stack))
+    }
+    try {
+        (pageQuery = s()) && (o.pageQuery = pageQuery)
+    } catch (t) {
+        console.log(t), o.errors.push(JSON.stringify(t.stack))
+    }
+    try {
+        (pageReferrer = t()) && (o.pageReferrer = pageReferrer)
+    } catch (t) {
+        console.log(t), o.errors.push(JSON.stringify(t.stack))
+    }
+    try {
+        o.pageOrigin = c()
+    } catch (t) {
+        console.log(t), o.errors.push(JSON.stringify(t.stack))
+    }
+    try {
+        o.pagePath = a()
+    } catch (t) {
+        console.log(t), o.errors.push(JSON.stringify(t.stack))
+    }
+    try {
+        o.pageTitle = i()
+    } catch (t) {
+        console.log(t), o.errors.push(JSON.stringify(t.stack))
+    }
+    try {
+        o = l.getAllUtmParameters(o)
+    } catch (t) {
+        console.log(t), o.errors.push(JSON.stringify(t.stack))
+    }
+    try {
+        o = p.getAllShopifyData(o)
+    } catch (t) {
+        console.log(t), o.errors.push(JSON.stringify(t.stack))
+    }
+    try {
+        r.headlessEmail && (o.headlessEmail = r.headlessEmail)
+    } catch (t) {}
+    try {
+        r.meta || "product" !== p.isShopifyPageWithMeta() ? d.sendPayloadToServer(o, 5) : d.getMetaInformationAndSend(o)
+    } catch (t) {
+        o.errors.push(JSON.stringify(t.stack)), d.sendPayloadToServer(o, 5)
+    }
+}(window);
