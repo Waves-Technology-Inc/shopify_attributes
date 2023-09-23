@@ -30,7 +30,7 @@ const webhook_sale_data = mongoose.model('Sale', saleSchema);
 app.use(bodyParser.json());
 
 app.get('/pixel.js', (req, res) => {
-    res.sendFile(path.join(__dirname, 'pap.txt'));
+    res.sendFile(path.join(__dirname, 'pixel.js'));
 });
 
 app.post('/webhooks/orders/create', async (req, res) => {
